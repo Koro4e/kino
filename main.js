@@ -2,60 +2,66 @@
     'use strict';
 
     const PLUGIN_NAME = 'WParty Redirect';
-    const TARGET_URL = 'https://wparty.net/search'; // Твоя ссылка на поиск
+    const TARGET_URL = 'https://wparty.net/search'; // Ссылка на поиск WParty
 
+    /**
+     * Функция вставки кнопки в карточку фильма/сериала
+     */
+    function injectButton(e) {
+        // Небольшая задержка, чтобы Лампа успела сгенерировать свой DOM
+        setTimeout(function () {
+            const render = e.object.activity.render();
+            const buttonsContainer = render.find('.full-start__buttons');
+
+            // Проверяем, существует ли контейнер и нет ли уже нашей кнопки
+            if (buttonsContainer.length && !buttonsContainer.find('.wparty-btn').length) {
+                
+                // Создаем кнопку в стиле Lampa
+                const button = $(`
+                    <div class="full-start__button selector wparty-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                        <span>WParty</span>
+                    </div>
+                `);
+
+                // Нажатие (работает с пультов, мыши и тачскринов)
+                button.on('hover:enter', function () {
+                    const movie = e.data.movie;
+                    const title = movie.title || movie.name || movie.original_title || '';
+                    let year = '';
+
+                    if (movie.release_date) {
+                        year = String(movie.release_date).substring(0, 4);
+                    } else if (movie.first_air_date) {
+                        year = String(movie.first_air_date).substring(0, 4);
+                    }
+
+                    const query = `${title} ${year}`.trim();
+                    const searchUrl = `${TARGET_URL}?q=${encodeURIComponent(query)}`;
+
+                    window.open(searchUrl, '_blank');
+                });
+
+                // Добавляем кнопку в блок
+                buttonsContainer.append(button);
+            }
+        }, 200);
+    }
+
+    /**
+     * Старт плагина и слушатели событий
+     */
     function startPlugin() {
-        // 1. Создаем компонент источника для бокового меню Лампы
-        Lampa.Component.add('wparty', function (object) {
-            let comp = this;
-
-            this.create = function () {
-                const title = object.movie.title || object.movie.name || object.movie.original_title || '';
-                let year = '';
-
-                if (object.movie.release_date) {
-                    year = String(object.movie.release_date).substring(0, 4);
-                } else if (object.movie.first_air_date) {
-                    year = String(object.movie.first_air_date).substring(0, 4);
-                }
-
-                const query = `${title} ${year}`.trim();
-                const searchUrl = `${TARGET_URL}?q=${encodeURIComponent(query)}`;
-
-                // Сразу открываем ссылку во внешней вкладке при выборе
-                window.open(searchUrl, '_blank');
-
-                // Возвращаем пустой элемент, чтобы Лампа не выдавала ошибку рендера
-                return $('<div></div>');
-            };
-
-            this.start = function () {};
-            this.destroy = function () {};
-        });
-
-        // 2. Регистрируем WParty в глобальном списке онлайн-балансеров Лампы
         Lampa.Listener.follow('full', function (e) {
-            if (e.type === 'complite') {
-                // Регистрируем источник в системе
-                if (window.lampa_settings) {
-                    Lampa.Params.select('wparty_use', {
-                        'true': 'Включено',
-                        'false': 'Выключено'
-                    }, 'true');
-                }
-
-                // Добавляем пункт WParty в реестр источников онлайн-просмотра
-                if (Lampa.Online) {
-                    Lampa.Online.add({
-                        name: 'WParty',
-                        component: 'wparty',
-                        memo: 'Переход на WParty'
-                    });
-                }
+            if (e.type === 'complite' && e.data && e.data.movie) {
+                injectButton(e);
             }
         });
     }
 
+    // Инициализация при готовности приложения
     if (window.appready) {
         startPlugin();
     } else {
