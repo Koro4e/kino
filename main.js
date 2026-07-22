@@ -4,7 +4,7 @@
     const PLUGIN_NAME = 'WParty Redirect';
     const TARGET_URL = 'https://wparty.net/search';
 
-    // Создание кнопки
+    // Создание родной кнопки Lampa
     function createButton(movieData) {
         const title = movieData.title || movieData.name || movieData.original_title || '';
         let year = '';
@@ -18,17 +18,17 @@
         const query = `${title} ${year}`.trim();
         const searchUrl = `${TARGET_URL}?q=${encodeURIComponent(query)}`;
 
-        // Создаём элемент кнопки
+        // Используем строго стандартные классы Лампы
         const button = $(`
-            <div class="full-start__button selector wparty-btn" tabindex="0" style="background: rgba(255,255,255,0.1); border-radius: 0.5em; display: inline-flex; align-items: center; justify-content: center; padding: 0.8em 1.2em; margin-right: 0.5em; cursor: pointer;">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" style="margin-right: 0.4em;">
+            <div class="full-start__button selector wparty-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
                     <path d="M8 5v14l11-7z"/>
                 </svg>
                 <span>WParty</span>
             </div>
         `);
 
-        // Клик мышкой или выбор с пульта
+        // Клик мышкой или событие Выбрать на пульте (hover:enter)
         button.on('hover:enter click', function (e) {
             e.preventDefault();
             e.stopPropagation();
@@ -38,27 +38,26 @@
         return button;
     }
 
-    // Внедрение в DOM
+    // Внедрение в блок кнопок
     function inject(movieData) {
         if (!movieData) return;
 
-        // Поиск любого подходящего контейнера для кнопок в открытой карточке
-        const container = $('.full-start__buttons, .full-start-new__buttons, .full-start__rate, .full-start').first();
+        // Находим блок с круглыми кнопками действий
+        const render = $('.full-start-new, .full-start, .activity').first();
+        const container = render.find('.full-start__buttons, .full-start-new__buttons').first();
 
-        if (container.length && !$('.wparty-btn').length) {
-            console.log('[WParty] Успешно вставили кнопку!');
+        if (container.length && !container.find('.wparty-btn').length) {
+            console.log('[WParty] Кнопка успешно добавлена');
             container.append(createButton(movieData));
             
-            // Переинициализируем навигацию пультом, если она есть
+            // Регистрируем новую кнопку в системе навигации пультом/клавиатурой
             if (window.Lampa && Lampa.Controller) {
                 Lampa.Controller.toggle('content');
             }
-        } else {
-            console.log('[WParty] Контейнер не найден или кнопка уже есть. Найдено контейнеров:', container.length);
         }
     }
 
-    // Извлечение данных фильма
+    // Вспомогательная функция получения данных о фильме
     function getMovieData(active) {
         if (!active) return null;
         if (active.activity && active.activity.data && active.activity.data.movie) {
@@ -76,7 +75,7 @@
     function start() {
         console.log('[WParty] Плагин запущен');
 
-        // 1. Если карточка уже открыта
+        // Проверка если карточка уже открыта
         setTimeout(function () {
             if (window.Lampa && Lampa.Activity && Lampa.Activity.active) {
                 const active = Lampa.Activity.active();
@@ -85,7 +84,7 @@
             }
         }, 300);
 
-        // 2. Слушаем переходы
+        // Слушаем переходы
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'complite') {
                 const movie = (e.data && e.data.movie) ? e.data.movie : e.card;
